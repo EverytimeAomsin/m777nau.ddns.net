@@ -1,0 +1,430 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>M107 Ballistic Computer</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Custom "Military" Font feel */
+        @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&display=swap');
+        
+        body {
+            font-family: 'JetBrains Mono', monospace;
+            background-color: #1a1c1a;
+            color: #e2e8f0;
+        }
+
+        .lcd-text {
+            color: #4ade80;
+            text-shadow: 0 0 5px rgba(74, 222, 128, 0.5);
+        }
+
+        .lcd-bg {
+            background-color: #0f1210;
+            border: 2px solid #374151;
+            box-shadow: inset 0 0 10px rgba(0,0,0,0.5);
+        }
+
+        .input-dark {
+            background-color: #27272a;
+            border: 1px solid #3f3f46;
+            color: #fff;
+        }
+        
+        .input-dark:focus {
+            outline: none;
+            border-color: #4ade80;
+            box-shadow: 0 0 0 1px #4ade80;
+        }
+
+        /* Scanline effect */
+        .scanlines {
+            background: linear-gradient(
+                to bottom,
+                rgba(255,255,255,0),
+                rgba(255,255,255,0) 50%,
+                rgba(0,0,0,0.1) 50%,
+                rgba(0,0,0,0.1)
+            );
+            background-size: 100% 4px;
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            pointer-events: none;
+            z-index: 50;
+        }
+        
+        .btn-adj {
+            background-color: #374151;
+            color: #e5e7eb;
+            font-size: 0.7rem;
+            padding: 4px;
+            border-radius: 4px;
+            font-weight: bold;
+            transition: background 0.2s;
+        }
+        .btn-adj:hover { background-color: #4b5563; }
+        .btn-adj:active { background-color: #1f2937; }
+        
+        .section-header {
+            font-size: 0.75rem;
+            font-weight: 700;
+            color: #9ca3af;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            margin-bottom: 0.5rem;
+            border-bottom: 1px solid #374151;
+            padding-bottom: 0.25rem;
+        }
+    </style>
+</head>
+<body class="min-h-screen p-4 flex flex-col items-center relative">
+    <div class="scanlines"></div>
+
+    <div class="max-w-2xl w-full z-10 pb-12">
+        <!-- Header -->
+        <header class="mb-6 text-center border-b-2 border-green-800 pb-4">
+            <h1 class="text-3xl font-bold text-green-500 tracking-wider">M107 FDC COMPUTER</h1>
+            <p class="text-xs text-gray-500 mt-1">FIELD ARTILLERY BALLISTIC DATA SYSTEM</p>
+        </header>
+
+        <!-- Main Calculator Grid -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+            
+            <!-- Battery Position Input -->
+            <div class="bg-gray-800 p-4 rounded-lg border border-gray-700 shadow-lg">
+                <h2 class="section-header">1. Battery Position (Point A)</h2>
+                <div class="grid grid-cols-2 gap-2">
+                    <div>
+                        <label class="text-xs text-gray-500">EASTING (X)</label>
+                        <input type="number" id="batX" placeholder="00000" class="input-dark w-full p-2 rounded text-lg font-bold" oninput="calculate()">
+                    </div>
+                    <div>
+                        <label class="text-xs text-gray-500">NORTHING (Y)</label>
+                        <input type="number" id="batY" placeholder="00000" class="input-dark w-full p-2 rounded text-lg font-bold" oninput="calculate()">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Target Position Input -->
+            <div class="bg-gray-800 p-4 rounded-lg border border-gray-700 shadow-lg">
+                <h2 class="section-header">2. Target Position (Point B)</h2>
+                <div class="grid grid-cols-2 gap-2">
+                    <div>
+                        <label class="text-xs text-gray-500">EASTING (X)</label>
+                        <input type="number" id="tgtX" placeholder="00000" class="input-dark w-full p-2 rounded text-lg font-bold" oninput="calculate()">
+                    </div>
+                    <div>
+                        <label class="text-xs text-gray-500">NORTHING (Y)</label>
+                        <input type="number" id="tgtY" placeholder="00000" class="input-dark w-full p-2 rounded text-lg font-bold" oninput="calculate()">
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Adjustments Section -->
+        <div class="bg-gray-800 p-4 rounded-lg border border-gray-700 shadow-lg mb-6">
+            <div class="flex justify-between items-center mb-2">
+                <h2 class="section-header border-none m-0">3. Spotter Corrections (Meters)</h2>
+                <button onclick="resetCorrections()" class="text-xs text-red-400 hover:text-red-300 uppercase font-bold">[Reset Corrections]</button>
+            </div>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <!-- Add/Drop (Range) -->
+                <div>
+                    <div class="flex justify-between text-xs text-gray-500 mb-1">
+                        <span>DROP (Closer)</span>
+                        <span>ADD (Further)</span>
+                    </div>
+                    <div class="flex gap-1 items-center">
+                        <input type="number" id="corrRange" value="0" class="input-dark w-20 text-center font-bold p-1 rounded" oninput="calculate()">
+                        <div class="grid grid-cols-3 gap-1 flex-1">
+                            <button class="btn-adj" onclick="adjust('corrRange', -100)">-100</button>
+                            <button class="btn-adj" onclick="adjust('corrRange', -50)">-50</button>
+                            <button class="btn-adj" onclick="adjust('corrRange', -10)">-10</button>
+                            <button class="btn-adj" onclick="adjust('corrRange', 100)">+100</button>
+                            <button class="btn-adj" onclick="adjust('corrRange', 50)">+50</button>
+                            <button class="btn-adj" onclick="adjust('corrRange', 10)">+10</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Left/Right (Azimuth) -->
+                <div>
+                    <div class="flex justify-between text-xs text-gray-500 mb-1">
+                        <span>LEFT</span>
+                        <span>RIGHT</span>
+                    </div>
+                    <div class="flex gap-1 items-center">
+                        <input type="number" id="corrLat" value="0" class="input-dark w-20 text-center font-bold p-1 rounded" oninput="calculate()">
+                        <div class="grid grid-cols-3 gap-1 flex-1">
+                            <button class="btn-adj" onclick="adjust('corrLat', -100)">L 100</button>
+                            <button class="btn-adj" onclick="adjust('corrLat', -50)">L 50</button>
+                            <button class="btn-adj" onclick="adjust('corrLat', -10)">L 10</button>
+                            <button class="btn-adj" onclick="adjust('corrLat', 100)">R 100</button>
+                            <button class="btn-adj" onclick="adjust('corrLat', 50)">R 50</button>
+                            <button class="btn-adj" onclick="adjust('corrLat', 10)">R 10</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div id="newGridDisplay" class="text-center text-xs text-gray-500 mt-2 font-mono h-4">
+                <!-- Shows corrected grid -->
+            </div>
+        </div>
+
+        <!-- Firing Solution Display -->
+        <div class="lcd-bg p-6 rounded-xl mb-6 relative overflow-hidden">
+            <div class="absolute top-0 right-0 p-2 opacity-30 text-green-900 font-bold text-6xl pointer-events-none select-none">FDC</div>
+            
+            <div class="grid grid-cols-2 gap-8 text-center relative z-10">
+                
+                <!-- Azimuth -->
+                <div>
+                    <div class="text-xs text-green-700 font-bold mb-1 uppercase">Azimuth (Bearing)</div>
+                    <div class="text-4xl font-bold lcd-text" id="resultAzimuth">----</div>
+                    <div class="text-sm text-green-800 font-bold mt-1" id="resultDegrees">(--°)</div>
+                </div>
+
+                <!-- Elevation -->
+                <div>
+                    <div class="text-xs text-green-700 font-bold mb-1 uppercase">Elevation (Mils)</div>
+                    <div class="text-5xl font-bold text-red-500 lcd-text" id="resultElev" style="text-shadow: 0 0 10px rgba(239, 68, 68, 0.5); color: #ef4444;">----</div>
+                </div>
+
+                <!-- Range -->
+                <div>
+                    <div class="text-xs text-green-700 font-bold mb-1 uppercase">Final Range</div>
+                    <div class="text-2xl font-bold lcd-text" id="resultRange">---- m</div>
+                </div>
+
+                <!-- TOF -->
+                <div>
+                    <div class="text-xs text-green-700 font-bold mb-1 uppercase">Time of Flight</div>
+                    <div class="text-2xl font-bold lcd-text" id="resultTof">--.- s</div>
+                </div>
+            </div>
+
+            <!-- Error Message Area -->
+            <div id="statusMsg" class="text-center mt-4 text-sm font-bold text-yellow-500 h-6">AWAITING COORDINATES...</div>
+        </div>
+
+        <!-- Reference Table Toggle -->
+        <div class="bg-gray-900 rounded-lg overflow-hidden border border-gray-800">
+            <button onclick="toggleTable()" class="w-full p-3 bg-gray-800 text-left text-xs font-bold text-gray-400 hover:bg-gray-700 flex justify-between">
+                <span>VIEW RAW BALLISTIC TABLE</span>
+                <span>▼</span>
+            </button>
+            <div id="tableContainer" class="hidden p-4 overflow-x-auto">
+                <table class="w-full text-xs text-right font-mono">
+                    <thead>
+                        <tr class="text-gray-500 border-b border-gray-700">
+                            <th class="pb-2">RANGE</th>
+                            <th class="pb-2 text-green-500">ELEV (MIL)</th>
+                            <th class="pb-2">TOF (SEC)</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tableBody" class="text-gray-400">
+                        <!-- JS fills this -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        
+        <div class="mt-4 text-center text-[10px] text-gray-600">
+            Based on M107 HE Shell Data (3000m - 5300m)
+        </div>
+    </div>
+
+    <script>
+        // Ballistic Data
+        const ballisticData = [
+            { r: 3000, elev: 1271, tof: 52.2 },
+            { r: 3100, elev: 1258, tof: 52.0 },
+            { r: 3200, elev: 1244, tof: 51.8 },
+            { r: 3300, elev: 1230, tof: 51.5 },
+            { r: 3400, elev: 1216, tof: 51.3 },
+            { r: 3500, elev: 1202, tof: 51.0 },
+            { r: 3600, elev: 1187, tof: 50.7 },
+            { r: 3700, elev: 1172, tof: 50.4 },
+            { r: 3800, elev: 1156, tof: 50.1 },
+            { r: 3900, elev: 1140, tof: 49.8 },
+            { r: 4000, elev: 1124, tof: 49.4 },
+            { r: 4100, elev: 1107, tof: 49.0 },
+            { r: 4200, elev: 1089, tof: 48.6 },
+            { r: 4300, elev: 1071, tof: 48.2 },
+            { r: 4400, elev: 1052, tof: 47.7 },
+            { r: 4500, elev: 1032, tof: 47.2 },
+            { r: 4600, elev: 1011, tof: 46.7 },
+            { r: 4700, elev: 989, tof: 46.1 },
+            { r: 4800, elev: 966,  tof: 45.5 },
+            { r: 4900, elev: 941,  tof: 44.7 },
+            { r: 5000, elev: 913,  tof: 44.0 },
+            { r: 5100, elev: 883,  tof: 43.1 },
+            { r: 5200, elev: 850,  tof: 42.0 },
+            { r: 5300, elev: 809,  tof: 40.7 }
+        ];
+
+        // Populate Table UI
+        const tableBody = document.getElementById('tableBody');
+        ballisticData.forEach(row => {
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td class="py-1 pr-4 border-b border-gray-800">${row.r}</td>
+                <td class="py-1 pr-4 border-b border-gray-800 text-green-400 font-bold">${row.elev}</td>
+                <td class="py-1 border-b border-gray-800">${row.tof}</td>
+            `;
+            tableBody.appendChild(tr);
+        });
+
+        function toggleTable() {
+            const el = document.getElementById('tableContainer');
+            el.classList.toggle('hidden');
+        }
+
+        function adjust(id, val) {
+            const el = document.getElementById(id);
+            let current = parseInt(el.value) || 0;
+            el.value = current + val;
+            calculate();
+        }
+
+        function resetCorrections() {
+            document.getElementById('corrRange').value = 0;
+            document.getElementById('corrLat').value = 0;
+            calculate();
+        }
+
+        function parseGrid(val) {
+            if (!val) return null;
+            let str = val.toString().trim();
+            let num = parseInt(str, 10);
+            if (isNaN(num)) return null;
+
+            // Auto-scale short grids logic
+            if (str.length === 3) num *= 100; 
+            else if (str.length === 4) num *= 10;
+            
+            return num;
+        }
+
+        function lerp(start, end, t) {
+            return start * (1 - t) + end * t;
+        }
+
+        function calculate() {
+            const batX_raw = document.getElementById('batX').value;
+            const batY_raw = document.getElementById('batY').value;
+            const tgtX_raw = document.getElementById('tgtX').value;
+            const tgtY_raw = document.getElementById('tgtY').value;
+
+            // Corrections
+            const corrRange = parseInt(document.getElementById('corrRange').value) || 0;
+            const corrLat = parseInt(document.getElementById('corrLat').value) || 0;
+
+            const bx = parseGrid(batX_raw);
+            const by = parseGrid(batY_raw);
+            const tx = parseGrid(tgtX_raw);
+            const ty = parseGrid(tgtY_raw);
+
+            const statusEl = document.getElementById('statusMsg');
+            const newGridEl = document.getElementById('newGridDisplay');
+            newGridEl.innerText = "";
+            
+            if (bx === null || by === null || tx === null || ty === null) {
+                return;
+            }
+
+            // 1. Calculate Initial Vector (Gun to Original Target)
+            const dx = tx - bx;
+            const dy = ty - by;
+            
+            // Initial Azimuth (Radians, CW from North)
+            // atan2(x, y) computes angle from Y-axis (North) in typical nav math
+            let initialTheta = Math.atan2(dx, dy); 
+
+            // 2. Apply Corrections
+            // "Add/Drop" moves along the Initial Azimuth vector
+            // "Left/Right" moves Perpendicular (Initial Azimuth + 90 deg)
+            
+            // New dX = Add * sin(theta) + Right * sin(theta + 90)
+            // New dY = Add * cos(theta) + Right * cos(theta + 90)
+            
+            // Note: sin(theta + 90) = cos(theta)
+            //       cos(theta + 90) = -sin(theta)
+            
+            const shiftX = (corrRange * Math.sin(initialTheta)) + (corrLat * Math.cos(initialTheta));
+            const shiftY = (corrRange * Math.cos(initialTheta)) - (corrLat * Math.sin(initialTheta));
+
+            const finalTx = tx + shiftX;
+            const finalTy = ty + shiftY;
+
+            // Show adjusted grid if corrections exist
+            if (corrRange !== 0 || corrLat !== 0) {
+                newGridEl.innerText = `Adjusted Grid: ${Math.round(finalTx)} / ${Math.round(finalTy)}`;
+            }
+
+            // 3. Calculate Final Firing Solution
+            const finalDx = finalTx - bx;
+            const finalDy = finalTy - by;
+            const dist = Math.sqrt(finalDx*finalDx + finalDy*finalDy);
+
+            document.getElementById('resultRange').innerText = Math.round(dist) + " m";
+
+            // Final Azimuth
+            let finalThetaRad = Math.atan2(finalDx, finalDy);
+            let finalThetaDeg = finalThetaRad * (180 / Math.PI);
+            if (finalThetaDeg < 0) finalThetaDeg += 360;
+            
+            const milsTotal = 6400;
+            const azimuthMils = Math.round((finalThetaDeg / 360) * milsTotal);
+            
+            document.getElementById('resultAzimuth').innerText = azimuthMils.toString().padStart(4, '0');
+            document.getElementById('resultDegrees').innerText = `(${Math.round(finalThetaDeg)}°)`;
+
+            // 4. Interpolate Ballistics
+            if (dist < 3000) {
+                document.getElementById('resultElev').innerText = "MIN RNG";
+                document.getElementById('resultTof').innerText = "---";
+                statusEl.innerText = "TARGET TOO CLOSE (<3000m)";
+                statusEl.className = "text-center mt-4 text-sm font-bold text-red-500 h-6";
+                return;
+            }
+            if (dist > 5300) {
+                document.getElementById('resultElev').innerText = "MAX RNG";
+                document.getElementById('resultTof').innerText = "---";
+                statusEl.innerText = "TARGET OUT OF RANGE (>5300m)";
+                statusEl.className = "text-center mt-4 text-sm font-bold text-red-500 h-6";
+                return;
+            }
+
+            statusEl.innerText = "SOLUTION COMPUTED";
+            statusEl.className = "text-center mt-4 text-sm font-bold text-green-500 h-6";
+
+            // Find rows
+            let lower = null;
+            let upper = null;
+
+            for (let i = 0; i < ballisticData.length - 1; i++) {
+                if (dist >= ballisticData[i].r && dist <= ballisticData[i+1].r) {
+                    lower = ballisticData[i];
+                    upper = ballisticData[i+1];
+                    break;
+                }
+            }
+
+            if (lower && upper) {
+                const rangeDelta = upper.r - lower.r;
+                const distOffset = dist - lower.r;
+                const ratio = distOffset / rangeDelta;
+
+                const elev = lerp(lower.elev, upper.elev, ratio);
+                const tof = lerp(lower.tof, upper.tof, ratio);
+
+                document.getElementById('resultElev').innerText = Math.round(elev);
+                document.getElementById('resultTof').innerText = tof.toFixed(1) + " s";
+            }
+        }
+    </script>
+</body>
+</html>
