@@ -3,6 +3,25 @@
 import { useState, useEffect } from "react";
 import { ballisticData, calculateBallistics } from "@/logic/calculations";
 
+// Cookie helper functions
+const setCookie = (name: string, value: string, hours: number) => {
+  const date = new Date();
+  date.setTime(date.getTime() + hours * 60 * 60 * 1000);
+  const expires = `expires=${date.toUTCString()}`;
+  document.cookie = `${name}=${value};${expires};path=/`;
+};
+
+const getCookie = (name: string): string | null => {
+  const nameEQ = `${name}=`;
+  const ca = document.cookie.split(';');
+  for (let i = 0; i < ca.length; i++) {
+    let c = ca[i];
+    while (c.charAt(0) === ' ') c = c.substring(1, c.length);
+    if (c.indexOf(nameEQ) === 0) return c.substring(nameEQ.length, c.length);
+  }
+  return null;
+};
+
 export default function Home() {
   const [batX, setBatX] = useState("");
   const [batY, setBatY] = useState("");
@@ -61,6 +80,27 @@ export default function Home() {
     setCorrRange(0);
     setCorrLat(0);
   };
+
+  // โหลดค่า Battery Position จากคุกกี้เมื่อ component mount
+  useEffect(() => {
+    const savedBatX = getCookie("batteryX");
+    const savedBatY = getCookie("batteryY");
+    if (savedBatX) setBatX(savedBatX);
+    if (savedBatY) setBatY(savedBatY);
+  }, []);
+
+  // บันทึกค่า Battery Position ลงคุกกี้เมื่อค่าเปลี่ยน (หมดอายุ 80 ชั่วโมง)
+  useEffect(() => {
+    if (batX) {
+      setCookie("batteryX", batX, 80);
+    }
+  }, [batX]);
+
+  useEffect(() => {
+    if (batY) {
+      setCookie("batteryY", batY, 80);
+    }
+  }, [batY]);
 
   // เมื่อ Battery Position หรือ Target Position เปลี่ยน ให้ reset corrections และเปิด table
   useEffect(() => {
