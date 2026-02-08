@@ -50,6 +50,26 @@ export default function Home() {
   const tgtYNum = parseGrid(tgtY);
   const isSouthDirection = batYNum !== null && tgtYNum !== null && tgtYNum < batYNum;
 
+  // คำนวณมุม azimuth จาก Battery ไป Target (สำหรับใช้ในกราฟิก)
+  const calculateAzimuth = (): number | null => {
+    const bx = parseGrid(batX);
+    const by = parseGrid(batY);
+    const tx = parseGrid(tgtX);
+    const ty = parseGrid(tgtY);
+    
+    if (bx === null || by === null || tx === null || ty === null) {
+      return null;
+    }
+    
+    const dx = tx - bx; // Easting difference
+    const dy = ty - by; // Northing difference
+    
+    // Azimuth in radians (CW from North)
+    return Math.atan2(dx, dy);
+  };
+
+  const azimuthRad = calculateAzimuth();
+
   // หา 2 แถวที่ใกล้เคียง Elevation มากที่สุด
   const getHighlightedRows = () => {
     const elevNum = parseInt(result.elev);
@@ -311,7 +331,7 @@ export default function Home() {
               onWheel={(e) => {
                 e.preventDefault();
                 const delta = e.deltaY > 0 ? -0.1 : 0.1;
-                setZoom((prev) => Math.max(0.5, Math.min(3, prev + delta)));
+                setZoom((prev) => Math.max(0.5, Math.min(10, prev + delta)));
               }}
               onMouseDown={(e) => {
                 if (e.button !== 0) return;
@@ -413,42 +433,67 @@ export default function Home() {
               </div>
 
               {/* Adjusted Target Position (จุดที่เลื่อนตามการแก้ไข) */}
-              {(corrRange !== 0 || corrLat !== 0) && (
-                <div
-                  className="absolute pointer-events-none"
-                  style={{
-                    left: `${Math.max(0, Math.min(100, targetPos.x + (corrLat * 0.5)))}%`,
-                    top: `${Math.max(0, Math.min(100, targetPos.y + (corrRange * 0.5 * (isSouthDirection ? 1 : -1))))}%`,
-                    transform: 'translate(-50%, -50%)',
-                  }}
-                >
-                  <div className="relative">
-                    <div className="w-5 h-5 bg-yellow-500 rounded-full border-2 border-yellow-300 shadow-lg shadow-yellow-500/50 animate-pulse"></div>
-                    <div className="absolute -top-7 left-1/2 transform -translate-x-1/2 text-xs text-yellow-400 font-bold whitespace-nowrap">
-                      ADJUSTED
-                    </div>
-                    <div className="absolute -bottom-7 left-1/2 transform -translate-x-1/2 text-[10px] text-yellow-400 font-mono whitespace-nowrap">
-                      ระยะ: {corrRange > 0 ? '+' : ''}{corrRange}m | ซ้ายขวา: {corrLat > 0 ? '+' : ''}{corrLat}m
+              {(corrRange !== 0 || corrLat !== 0) && azimuthRad !== null && (() => {
+                // คำนวณการเคลื่อนที่ตามทิศทาง azimuth
+                // shiftX = corrRange * sin(azimuth) + corrLat * cos(azimuth) (Easting)
+                // shiftY = corrRange * cos(azimuth) - corrLat * sin(azimuth) (Northing)
+                const shiftX = corrRange * Math.sin(azimuthRad) + corrLat * Math.cos(azimuthRad);
+                const shiftY = corrRange * Math.cos(azimuthRad) - corrLat * Math.sin(azimuthRad);
+                
+                // แปลงเป็นเปอร์เซ็นต์ในกราฟิก (scale factor 1.0 เพื่อให้เห็นชัดเจนขึ้น)
+                // ในกราฟิก: Y เพิ่มขึ้นคือลงล่าง แต่ในพิกัด Y เพิ่มขึ้นคือขึ้นเหนือ ดังนั้นต้องกลับเครื่องหมาย
+                const scale = 1.0;
+                const adjustedX = targetPos.x + shiftX * scale;
+                const adjustedY = targetPos.y - shiftY * scale; // กลับเครื่องหมายเพราะ Y ในกราฟิกคือล่าง
+                
+                return (
+                  <div
+                    className="absolute pointer-events-none"
+                    style={{
+                      left: `${Math.max(0, Math.min(100, adjustedX))}%`,
+                      top: `${Math.max(0, Math.min(100, adjustedY))}%`,
+                      transform: 'translate(-50%, -50%)',
+                    }}
+                  >
+                    <div className="relative">
+                      <div className="w-5 h-5 bg-yellow-500 rounded-full border-2 border-yellow-300 shadow-lg shadow-yellow-500/50 animate-pulse"></div>
+                      <div className="absolute -top-7 left-1/2 transform -translate-x-1/2 text-xs text-yellow-400 font-bold whitespace-nowrap">
+                        ADJUSTED
+                      </div>
+                      <div className="absolute -bottom-7 left-1/2 transform -translate-x-1/2 text-[10px] text-yellow-400 font-mono whitespace-nowrap">
+                        ระยะ: {corrRange > 0 ? '+' : ''}{corrRange}m | ซ้ายขวา: {corrLat > 0 ? '+' : ''}{corrLat}m
+                      </div>
                     </div>
                   </div>
-                </div>
-              )}
+                );
+              })()}
 
               {/* Line connecting original and adjusted target */}
-              {(corrRange !== 0 || corrLat !== 0) && (
-                <svg className="absolute inset-0 w-full h-full pointer-events-none">
-                  <line
-                    x1={`${targetPos.x}%`}
-                    y1={`${targetPos.y}%`}
-                    x2={`${Math.max(0, Math.min(100, targetPos.x + (corrLat * 0.5)))}%`}
-                    y2={`${Math.max(0, Math.min(100, targetPos.y + (corrRange * 0.5 * (isSouthDirection ? 1 : -1))))}%`}
-                    stroke="#fbbf24"
-                    strokeWidth="2"
-                    strokeDasharray="4,4"
-                    opacity="0.6"
-                  />
-                </svg>
-              )}
+              {(corrRange !== 0 || corrLat !== 0) && azimuthRad !== null && (() => {
+                // คำนวณการเคลื่อนที่ตามทิศทาง azimuth
+                const shiftX = corrRange * Math.sin(azimuthRad) + corrLat * Math.cos(azimuthRad);
+                const shiftY = corrRange * Math.cos(azimuthRad) - corrLat * Math.sin(azimuthRad);
+                
+                // แปลงเป็นเปอร์เซ็นต์ในกราฟิก (scale factor 1.0 เพื่อให้เห็นชัดเจนขึ้น)
+                const scale = 1.0;
+                const adjustedX = targetPos.x + shiftX * scale;
+                const adjustedY = targetPos.y - shiftY * scale; // กลับเครื่องหมายเพราะ Y ในกราฟิกคือล่าง
+                
+                return (
+                  <svg className="absolute inset-0 w-full h-full pointer-events-none">
+                    <line
+                      x1={`${targetPos.x}%`}
+                      y1={`${targetPos.y}%`}
+                      x2={`${Math.max(0, Math.min(100, adjustedX))}%`}
+                      y2={`${Math.max(0, Math.min(100, adjustedY))}%`}
+                      stroke="#fbbf24"
+                      strokeWidth="2"
+                      strokeDasharray="4,4"
+                      opacity="0.6"
+                    />
+                  </svg>
+                );
+              })()}
             </div>
             </div>
           </div>
