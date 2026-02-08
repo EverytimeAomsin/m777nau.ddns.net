@@ -570,12 +570,12 @@ export default function Home() {
               </div>
               
               {/* ปุ่ม R อยู่ขวา (หรือซ้ายเมื่อยิงทิศใต้) */}
-              <div className={`flex gap-1 flex-1 ${effectiveSouthDirection ? 'justify-end' : 'justify-start'}`}>
-              <button
+              <div className={`flex gap-1 flex-1 ${effectiveSouthDirection ? 'justify-end' : 'justify-start'} ${effectiveSouthDirection ? 'flex-row-reverse' : ''}`}>
+                <button
                   className="btn-adj flex-1"
-                  onClick={() => adjust("corrLat", 50)}
+                  onClick={() => adjust("corrLat", 10)}
                 >
-                  R 50
+                  R 10
                 </button>
                 <button
                   className="btn-adj flex-1"
@@ -583,12 +583,11 @@ export default function Home() {
                 >
                   R 20
                 </button>
-              
                 <button
                   className="btn-adj flex-1"
-                  onClick={() => adjust("corrLat", 10)}
+                  onClick={() => adjust("corrLat", 50)}
                 >
-                  R 10
+                  R 50
                 </button>
               </div>
             </div>
