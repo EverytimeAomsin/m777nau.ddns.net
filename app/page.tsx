@@ -33,6 +33,7 @@ export default function Home() {
   const [panX, setPanX] = useState(0);
   const [zoom, setZoom] = useState(1);
   const [targetPos, setTargetPos] = useState({ x: 50, y: 50 }); // Percentage position
+  const [flipView, setFlipView] = useState(false); // สำหรับกลับมุมมองเมื่อยิงทิศใต้
 
   const result = calculateBallistics(batX, batY, tgtX, tgtY, corrRange, corrLat);
 
@@ -49,6 +50,8 @@ export default function Home() {
   const batYNum = parseGrid(batY);
   const tgtYNum = parseGrid(tgtY);
   const isSouthDirection = batYNum !== null && tgtYNum !== null && tgtYNum < batYNum;
+  // ใช้ flipView เพื่อกลับมุมมอง (ถ้า flipView = true จะยกเลิก isSouthDirection)
+  const effectiveSouthDirection = isSouthDirection && !flipView;
 
   // คำนวณมุม azimuth จาก Battery ไป Target (สำหรับใช้ในกราฟิก)
   const calculateAzimuth = (): number | null => {
@@ -135,7 +138,7 @@ export default function Home() {
     <main className="min-h-screen p-4 flex flex-col items-center relative">
       <div className="scanlines"></div>
 
-      <div className="max-w-2xl w-full z-10 pb-12">
+      <div className="max-w-[1280px] w-full z-10 pb-12">
         <div className="bg-gray-800 p-4 rounded-lg border border-gray-700 shadow-lg mb-6">
           
           <div className="flex justify-between items-center mb-2">
@@ -175,7 +178,7 @@ export default function Home() {
             M107 FDC COMPUTER
           </h1>
           <p className="text-xs text-gray-500 mt-1">
-            FIELD ARTILLERY BALLISTIC DATA SYSTEM
+          TOFTS M777 FIELD ARTILLERY BALLISTIC DATA SYSTEM
           </p>
         </header>
 
@@ -245,12 +248,22 @@ export default function Home() {
             <h2 className="section-header border-none m-0">
               3. ปรับเทียบระยะปืนใหญ่ (เมตร)
             </h2>
-            <button
-              onClick={resetCorrections}
-              className="text-xs text-red-400 hover:text-red-300 uppercase font-bold"
-            >
-              [Reset Corrections]
-            </button>
+            <div className="flex gap-2 items-center">
+              {isSouthDirection && (
+                <button
+                  onClick={() => setFlipView(!flipView)}
+                  className="text-xs text-green-400 hover:text-green-300 uppercase font-bold px-3 py-1 border border-green-400 rounded bg-gray-800"
+                >
+                  {flipView ? '[กดเพื่อสลับโหมดแผนที่]' : '[กดเพื่อสลับโหมดคนยิง]'}
+                </button>
+              )}
+              <button
+                onClick={resetCorrections}
+                className="text-xs text-red-400 hover:text-red-300 uppercase font-bold"
+              >
+                [Reset Corrections]
+              </button>
+            </div>
           </div>
           <div className="flex gap-4 items-stretch">
             {/* Range Control (ด้านซ้าย - แนวตั้ง) */}
@@ -265,51 +278,57 @@ export default function Home() {
               <div className="flex flex-col gap-1">
                 <button
                   className="btn-adj w-12 h-8 text-xs"
-                  onClick={() => adjust("corrRange", isSouthDirection ? -50 : 50)}
+                  onClick={() => adjust("corrRange", effectiveSouthDirection ? -50 : 50)}
                 >
-                  {isSouthDirection ? "-50" : "+50"}
+                  {effectiveSouthDirection ? "-50" : "+50"}
                 </button>
                 <button
                   className="btn-adj w-12 h-8 text-xs"
-                  onClick={() => adjust("corrRange", isSouthDirection ? -20 : 20)}
+                  onClick={() => adjust("corrRange", effectiveSouthDirection ? -20 : 20)}
                 >
-                  {isSouthDirection ? "-20" : "+20"}
+                  {effectiveSouthDirection ? "-20" : "+20"}
                 </button>
                 <button
                   className="btn-adj w-12 h-8 text-xs"
-                  onClick={() => adjust("corrRange", isSouthDirection ? -10 : 10)}
+                  onClick={() => adjust("corrRange", effectiveSouthDirection ? -10 : 10)}
                 >
-                  {isSouthDirection ? "-10" : "+10"}
+                  {effectiveSouthDirection ? "-10" : "+10"}
                 </button>
               </div>
 
               {/* กลาง: ค่า */}
-              <input
-                type="number"
-                value={corrRange}
-                className="input-dark w-16 text-center font-bold p-2 rounded text-lg"
-                onChange={(e) => setCorrRange(parseInt(e.target.value) || 0)}
-              />
+              <div className="text-[11px] flex flex-col items-center gap-1">
+              {corrRange === 0
+  ? "ไม่ได้แก้มุมการยิง"
+  : `${corrRange > 0 ? "เพิ่มระยะยิง" : "ลดระยะยิง"} ${Math.abs(corrRange)} M`
+}
+                <input
+                  type="number"
+                  value={corrRange}
+                  className="input-dark w-16 text-center font-bold p-2 rounded text-lg"
+                  onChange={(e) => setCorrRange(parseInt(e.target.value) || 0)}
+                />
+              </div>
 
               {/* ปุ่มลด - ล่าง */}
               <div className="flex flex-col gap-1">
                 <button
                   className="btn-adj w-12 h-8 text-xs"
-                  onClick={() => adjust("corrRange", isSouthDirection ? 10 : -10)}
+                  onClick={() => adjust("corrRange", effectiveSouthDirection ? 10 : -10)}
                 >
-                  {isSouthDirection ? "+10" : "-10"}
+                  {effectiveSouthDirection ? "+10" : "-10"}
                 </button>
                 <button
                   className="btn-adj w-12 h-8 text-xs"
-                  onClick={() => adjust("corrRange", isSouthDirection ? 20 : -20)}
+                  onClick={() => adjust("corrRange", effectiveSouthDirection ? 20 : -20)}
                 >
-                  {isSouthDirection ? "+20" : "-20"}
+                  {effectiveSouthDirection ? "+20" : "-20"}
                 </button>
                 <button
                   className="btn-adj w-12 h-8 text-xs"
-                  onClick={() => adjust("corrRange", isSouthDirection ? 50 : -50)}
+                  onClick={() => adjust("corrRange", effectiveSouthDirection ? 50 : -50)}
                 >
-                  {isSouthDirection ? "+50" : "-50"}
+                  {effectiveSouthDirection ? "+50" : "-50"}
                 </button>
               </div>
 
@@ -322,6 +341,16 @@ export default function Home() {
 
             {/* กราฟิก */}
             <div className="relative flex-1 bg-gray-900 rounded-lg overflow-hidden border border-gray-700">
+              {/* ทิศเหนือ - มุมขวาบน (อยู่นอก transform เพื่อไม่ให้ถูกซูม) */}
+              <div className="absolute top-2 right-2 pointer-events-none z-20">
+                <div className="flex flex-col items-center text-green-400">
+                  <div className="text-xs font-bold mb-1">N</div>
+                  <svg width="20" height="20" viewBox="0 0 20 20" className="text-green-400">
+                    <path d="M 10 2 L 10 18 M 10 2 L 6 8 M 10 2 L 14 8" stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round"/>
+                  </svg>
+                </div>
+              </div>
+
             <div
               className="w-full h-full relative"
               style={{
@@ -364,16 +393,6 @@ export default function Home() {
                 </defs>
                 <rect width="100%" height="100%" fill="url(#grid)" />
               </svg>
-
-              {/* ทิศเหนือ - มุมขวาบน */}
-              <div className="absolute top-2 right-2 pointer-events-none z-10">
-                <div className="flex flex-col items-center text-green-400">
-                  <div className="text-xs font-bold mb-1">N</div>
-                  <svg width="20" height="20" viewBox="0 0 20 20" className="text-green-400">
-                    <path d="M 10 2 L 10 18 M 10 2 L 6 8 M 10 2 L 14 8" stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round"/>
-                  </svg>
-                </div>
-              </div>
 
               {/* Center Crosshair */}
               <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 pointer-events-none">
@@ -440,11 +459,21 @@ export default function Home() {
                 const shiftX = corrRange * Math.sin(azimuthRad) + corrLat * Math.cos(azimuthRad);
                 const shiftY = corrRange * Math.cos(azimuthRad) - corrLat * Math.sin(azimuthRad);
                 
-                // แปลงเป็นเปอร์เซ็นต์ในกราฟิก (scale factor 1.0 เพื่อให้เห็นชัดเจนขึ้น)
+                // แปลงเป็นเปอร์เซ็นต์ในกราฟิก (scale factor 0.6 เพื่อซูมออกมากขึ้น)
                 // ในกราฟิก: Y เพิ่มขึ้นคือลงล่าง แต่ในพิกัด Y เพิ่มขึ้นคือขึ้นเหนือ ดังนั้นต้องกลับเครื่องหมาย
-                const scale = 1.0;
+                const scale = 0.6;
                 const adjustedX = targetPos.x + shiftX * scale;
                 const adjustedY = targetPos.y - shiftY * scale; // กลับเครื่องหมายเพราะ Y ในกราฟิกคือล่าง
+                
+                // กำหนดข้อความซ้ายขวา
+                let latText = "";
+                if (corrLat < 0) {
+                  latText = `ซ้าย: ${Math.abs(corrLat)}m`;
+                } else if (corrLat === 0) {
+                  latText = "ไม่มีการแก้มุมยิง";
+                } else {
+                  latText = `ขวา: ${corrLat}m`;
+                }
                 
                 return (
                   <div
@@ -461,7 +490,7 @@ export default function Home() {
                         ADJUSTED
                       </div>
                       <div className="absolute -bottom-7 left-1/2 transform -translate-x-1/2 text-[10px] text-yellow-400 font-mono whitespace-nowrap">
-                        ระยะ: {corrRange > 0 ? '+' : ''}{corrRange}m | ซ้ายขวา: {corrLat > 0 ? '+' : ''}{corrLat}m
+                        ระยะ: {corrRange > 0 ? '+' : ''}{corrRange}m | {latText}
                       </div>
                     </div>
                   </div>
@@ -474,8 +503,8 @@ export default function Home() {
                 const shiftX = corrRange * Math.sin(azimuthRad) + corrLat * Math.cos(azimuthRad);
                 const shiftY = corrRange * Math.cos(azimuthRad) - corrLat * Math.sin(azimuthRad);
                 
-                // แปลงเป็นเปอร์เซ็นต์ในกราฟิก (scale factor 1.0 เพื่อให้เห็นชัดเจนขึ้น)
-                const scale = 1.0;
+                // แปลงเป็นเปอร์เซ็นต์ในกราฟิก (scale factor 0.6 เพื่อซูมออกมากขึ้น)
+                const scale = 0.6;
                 const adjustedX = targetPos.x + shiftX * scale;
                 const adjustedY = targetPos.y - shiftY * scale; // กลับเครื่องหมายเพราะ Y ในกราฟิกคือล่าง
                 
@@ -504,18 +533,14 @@ export default function Home() {
               <span>LEFT</span>
               <span>RIGHT</span>
             </div>
-            <div className={`flex gap-2 items-center w-full ${isSouthDirection ? 'flex-row-reverse' : ''}`}>
+            <div className={`flex gap-2 items-center w-full ${effectiveSouthDirection ? 'flex-row-reverse' : ''}`}>
               {/* ปุ่ม L อยู่ซ้าย (หรือขวาเมื่อยิงทิศใต้) */}
-              <div className={`flex gap-1 flex-1 ${isSouthDirection ? 'justify-start' : 'justify-end'}`}>
-              
-              
-               
-             
+              <div className={`flex gap-1 flex-1 ${effectiveSouthDirection ? 'justify-start' : 'justify-end'} ${!effectiveSouthDirection ? 'flex-row-reverse' : ''}`}>
                 <button
                   className="btn-adj flex-1"
-                  onClick={() => adjust("corrLat", -50)}
+                  onClick={() => adjust("corrLat", -10)}
                 >
-                  L 50
+                  L 10
                 </button>
                 <button
                   className="btn-adj flex-1"
@@ -525,27 +550,32 @@ export default function Home() {
                 </button>
                 <button
                   className="btn-adj flex-1"
-                  onClick={() => adjust("corrLat", -10)}
+                  onClick={() => adjust("corrLat", -50)}
                 >
-                  L 10
+                  L 50
                 </button>
               </div>
               
               {/* Input อยู่ตรงกลาง */}
-              <input
-                type="number"
-                value={corrLat}
-                className="input-dark w-20 text-center font-bold p-1 rounded"
-                onChange={(e) => setCorrLat(parseInt(e.target.value) || 0)}
-              />
+              <div className="flex flex-col items-center gap-1">
+                <div className="text-[11px] text-gray-400 text-center whitespace-nowrap">
+                  {corrLat > 0 ? `ไปทางขวา ${corrLat} M` : corrLat < 0 ? `ไปทางซ้าย ${Math.abs(corrLat)} M` : "ไม่มีการแก้องศาการยิง"}
+                </div>
+                <input
+                  type="number"
+                  value={corrLat}
+                  className="input-dark w-20 text-center font-bold p-1 rounded"
+                  onChange={(e) => setCorrLat(parseInt(e.target.value) || 0)}
+                />
+              </div>
               
               {/* ปุ่ม R อยู่ขวา (หรือซ้ายเมื่อยิงทิศใต้) */}
-              <div className={`flex gap-1 flex-1 ${isSouthDirection ? 'justify-end' : 'justify-start'}`}>
-                <button
+              <div className={`flex gap-1 flex-1 ${effectiveSouthDirection ? 'justify-end' : 'justify-start'}`}>
+              <button
                   className="btn-adj flex-1"
-                  onClick={() => adjust("corrLat", 10)}
+                  onClick={() => adjust("corrLat", 50)}
                 >
-                  R 10
+                  R 50
                 </button>
                 <button
                   className="btn-adj flex-1"
@@ -553,11 +583,12 @@ export default function Home() {
                 >
                   R 20
                 </button>
+              
                 <button
                   className="btn-adj flex-1"
-                  onClick={() => adjust("corrLat", 50)}
+                  onClick={() => adjust("corrLat", 10)}
                 >
-                  R 50
+                  R 10
                 </button>
               </div>
             </div>
@@ -689,7 +720,7 @@ export default function Home() {
         </div>
 
         <div className="mt-4 text-center text-[10px] text-gray-600">
-          Based on M107 HE Shell Data (3000m - 5300m)
+        TOFTS M777 Howitzer arma reforger M107 HE Shell Data (3000m - 5300m)
         </div>
       </div>
     </main>
