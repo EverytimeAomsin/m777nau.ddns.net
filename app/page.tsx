@@ -504,9 +504,13 @@ export default function Home() {
               <span>LEFT</span>
               <span>RIGHT</span>
             </div>
-            <div className="flex gap-2 items-center w-full">
-              {/* ปุ่ม L อยู่ซ้าย */}
-              <div className="flex gap-1 flex-1 justify-end">
+            <div className={`flex gap-2 items-center w-full ${isSouthDirection ? 'flex-row-reverse' : ''}`}>
+              {/* ปุ่ม L อยู่ซ้าย (หรือขวาเมื่อยิงทิศใต้) */}
+              <div className={`flex gap-1 flex-1 ${isSouthDirection ? 'justify-start' : 'justify-end'}`}>
+              
+              
+               
+             
                 <button
                   className="btn-adj flex-1"
                   onClick={() => adjust("corrLat", -50)}
@@ -535,8 +539,8 @@ export default function Home() {
                 onChange={(e) => setCorrLat(parseInt(e.target.value) || 0)}
               />
               
-              {/* ปุ่ม R อยู่ขวา */}
-              <div className="flex gap-1 flex-1 justify-start">
+              {/* ปุ่ม R อยู่ขวา (หรือซ้ายเมื่อยิงทิศใต้) */}
+              <div className={`flex gap-1 flex-1 ${isSouthDirection ? 'justify-end' : 'justify-start'}`}>
                 <button
                   className="btn-adj flex-1"
                   onClick={() => adjust("corrLat", 10)}
