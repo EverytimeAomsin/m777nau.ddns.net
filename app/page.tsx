@@ -37,7 +37,6 @@ export default function Home() {
 
   const result = calculateBallistics(batX, batY, tgtX, tgtY, corrRange, corrLat);
 
-  // คำนวณอัตโนมัติ: ถ้า Target อยู่ใต้ Battery (tgtY < batY) = ยิงไปทิศใต้
   const parseGrid = (val: string): number | null => {
     if (!val) return null;
     let num = parseInt(val, 10);
@@ -50,10 +49,8 @@ export default function Home() {
   const batYNum = parseGrid(batY);
   const tgtYNum = parseGrid(tgtY);
   const isSouthDirection = batYNum !== null && tgtYNum !== null && tgtYNum < batYNum;
-  // ใช้ flipView เพื่อกลับมุมมอง (ถ้า flipView = true จะยกเลิก isSouthDirection)
   const effectiveSouthDirection = isSouthDirection && !flipView;
 
-  // คำนวณมุม azimuth จาก Battery ไป Target (สำหรับใช้ในกราฟิก)
   const calculateAzimuth = (): number | null => {
     const bx = parseGrid(batX);
     const by = parseGrid(batY);
@@ -73,14 +70,13 @@ export default function Home() {
 
   const azimuthRad = calculateAzimuth();
 
-  // หา 2 แถวที่ใกล้เคียง Elevation มากที่สุด
+
   const getHighlightedRows = () => {
     const elevNum = parseInt(result.elev);
     if (isNaN(elevNum) || result.elev === "----" || result.elev === "MIN RNG" || result.elev === "MAX RNG") {
       return [];
     }
 
-    // หาแถวที่ใกล้เคียงที่สุด 2 แถว
     const sorted = [...ballisticData]
       .map((row, index) => ({ ...row, index, diff: Math.abs(row.elev - elevNum) }))
       .sort((a, b) => a.diff - b.diff)
@@ -112,7 +108,7 @@ export default function Home() {
     if (savedBatY) setBatY(savedBatY);
   }, []);
 
-  // บันทึกค่า Battery Position ลงคุกกี้เมื่อค่าเปลี่ยน (หมดอายุ 80 ชั่วโมง)
+  // บันทึกค่า Battery Position
   useEffect(() => {
     if (batX) {
       setCookie("batteryX", batX, 80);
@@ -125,7 +121,7 @@ export default function Home() {
     }
   }, [batY]);
 
-  // เมื่อ Battery Position หรือ Target Position เปลี่ยน ให้ reset corrections และเปิด table
+
   useEffect(() => {
     if (batX && batY && tgtX && tgtY) {
       setCorrRange(0);
@@ -266,15 +262,13 @@ export default function Home() {
             </div>
           </div>
           <div className="flex gap-4 items-stretch">
-            {/* Range Control (ด้านซ้าย - แนวตั้ง) */}
             <div className="flex flex-col items-center justify-center gap-2 min-w-[90px] bg-gray-900/50 p-3 rounded border border-gray-700">
-              {/* บน: ADD (Further) */}
               <div className="text-xs text-gray-500 text-center mb-1">
                 <div>ADD</div>
                 <div className="text-[10px]">(Further)</div>
               </div>
               
-              {/* ปุ่มเพิ่ม - บน */}
+              
               <div className="flex flex-col gap-1">
                 <button
                   className="btn-adj w-12 h-8 text-xs"
@@ -296,7 +290,7 @@ export default function Home() {
                 </button>
               </div>
 
-              {/* กลาง: ค่า */}
+           
               <div className="text-[11px] flex flex-col items-center gap-1">
               {corrRange === 0
   ? "ไม่ได้แก้มุมการยิง"
@@ -339,9 +333,7 @@ export default function Home() {
               </div>
             </div>
 
-            {/* กราฟิก */}
             <div className="relative flex-1 bg-gray-900 rounded-lg overflow-hidden border border-gray-700">
-              {/* ทิศเหนือ - มุมขวาบน (อยู่นอก transform เพื่อไม่ให้ถูกซูม) */}
               <div className="absolute top-2 right-2 pointer-events-none z-20">
                 <div className="flex flex-col items-center text-green-400">
                   <div className="text-xs font-bold mb-1">N</div>
